@@ -62,6 +62,37 @@ Stores can register their callbacks with the dispatcher in their `init` method:
       }.bind(this));
     }
 
+Pivoting on `source` and `type`:
+
+    // assuming the same setup...
+    if (payload.source === page.constants.VIEW_SOURCE) {
+  
+      // Discuss: let's try to keep the type attribute to something concrete
+      if (payload.action.type === "foo") {
+      
+        this.handleFoo(payload.action);
+      }
+  
+    }
+  
+An example of a the above handler that pivots based on `concern`:
+
+    handleFoo: function handleFoo(action) {
+      switch(action.concern) {
+      
+        case "update":
+          this.set(action.data);
+        break;
+        
+        case "delete":
+          this.unset(action.data);
+        break;
+      }
+      
+      this.emitChange();
+    }
+
+  
 ##The Dispatcher
 So, you [get the idea](http://facebook.github.io/flux/docs/overview.html#what-about-that-dispatcher).
 
