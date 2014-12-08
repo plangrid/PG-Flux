@@ -214,19 +214,18 @@ These methods belong to the `page.actions` namespace and are defined both at the
 We sequester these methods in either the `action_creators/application.js` or the 
 `view_actions` and `route_actions` files unique to each domain, `action_creators/rfis/route_actions`
 for example. These should be something very specific so naming clashes will not
-be a problem. A naming convention to follow is using `informFoo` for views and 
-`fooRouteCalled` for routes. The globally available:
+be a problem. Some good naming conventions to follow are using `informFoo` when
+introducing new data into the system such as the globally available:
 
-    page.actions.informRoute("foo", {...});
+    page.actions.informRoute("bar", {...});
     
-For example dispathes an action that will be handled by the Backbone navigator, and
-there is:
+Or actions specific to the user doing things:
 
-    page.actions.informAnalytics(methodName, args);
+    page.actions.downloadReportSelected({...});
     
-for dispatching analytics events. Both of these methods begin with "inform" obviously
-and re-inforce the idea that views **inform** the flux system of new data by raising
-events.
+Routing actions name should reflect their purpose:
+
+    page.actions.showRouteCalled({...});
 
 There is a little philosophy involved in the scope of views dispatching actions and
 delegating to action creators. For example, the router chooses to use a
@@ -249,8 +248,8 @@ While it is the logical domain of a router to understand routes and the view
 constructors that will be called upon to handle them, it is not in it's 
 responsibilities to make data stores. Even though the route_actions creators
 are associated with the router, they are not *tightly* coupled to it and they do
-provide the place to expand scope. This may be stretching [Demeter's Law]() 
-somewhat but the elasticity we build in here will prevent over-engineering
+provide the place to expand scope. This may be stretching [Demeter's Law](http://en.wikipedia.org/wiki/Law_of_Demeter) 
+somewhat but the elasticity we build in here will prevent over-engineering in the future.
 
 
 ##Views
