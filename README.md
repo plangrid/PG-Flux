@@ -99,6 +99,7 @@ From the flux docs [here](http://facebook.github.io/flux/docs/overview.html#what
 Actions are sent to the dispatcher by **2** sources:
 
 1. The Router, including its associated `route_actions` action creators
+
 2. Views, including their associated `view_actions` action creators
 
 Remember that Stores register with the dispatcher when istantiated and that the
@@ -107,6 +108,19 @@ dispatcher sends every dispatched payload to every registered callback.
 The dispatcher also makes use of the `invariant` development tool and will throw
 an error if cyclical dependency (via `waitFor`) is detected or **cascading dispatches**
 occur.
+
+###About waitFor([id, ...])
+Note that calls to `dispatcher.waitFor` must happen during a dispatch or the
+invariant will throw an error. In other words that call always appears in a
+registered dispatch callback.
+
+    page.dispatcher.register(function(payload) {
+      if (some-source-and-type-stuff) {
+        page.dispatcher.waitFor([foo.dispatchId, bar.dispatchId]);
+        
+        // do stuff knowing that foo and bar stores callbacks have been called
+      }
+    });
 
 ####On Cascading Dispatches
 If, during a dispatch callback another dispatch is attempted you will get the
@@ -152,7 +166,91 @@ appear on an action:
 
 + **type**. This is the closest we come to a mandatory attribute for an action, 
 though there may be occassions when `source` alone is enough for a given store.
-The value is something that informs the consuming store about what just happened.
+The value is the **subject** to which something just happened. Though this 
+property varies we should be able to standardize around something concrete. 
+The use of `concern` (see below) can further help to keep this value limited to 
+something with meaning.
+
++ **concern**. Views need to provide information when dispatching. In an attempt
+to standardize the nomenclature around actions we will use _CRUD_ verbs to help
+differentiate dispatches where `type` may be the same. An example would be 2
+child views who both dispatch events related to user actions pertaining to a 
+subject "foo":
+
+    // some view owns the actions where a user creates a foo
+    page.dispatcher.dispatchViewAction({
+      type: "foo",
+      concern: "create",
+      data: {baz: "qux"}
+    });
+    
+    // some other view owns the action where foo is deleted
+    page.dispatcher.dispatchViewAction({
+      type: "foo",
+      concern: "delete",
+      data: fooId
+    });
+    
+The point being that the `type` here is the subject which can, preferably, remain
+something meaningful to the domain, "foo" in this case. We could have easily
+performed this without the added `concern` attribute, opting instead for varied
+`type` props like `create-foo` and `fooDeleted`. My concern there is that we may
+see **many** varied types of custom "type names". Keeping `type` restricted to
+subject and using **only** _create_, _read_, _update_, _delete_ prevents that.
+
+Worth noting is the _CRUD_ verb used by the action does not map directly to
+a data-domain operation. It will be up to the stores interested in this action
+to decide what to do with it. We should think of these things in the
+**polymorphic** sense that this is an interpretation of an event. A `concern` of
+_create_ can cover any sort of "newish" occurance. Same for the the other verbs...
+
+###Action Creators
+Generally views can dispatch actions when needed. Sometimes, however, you may
+need to step outside of the logical scope of your view when dispatching, or you
+may be able to use an action that is available globally to all views and the router.
+These methods belong to the `page.actions` namespace and are defined both at the
+`application` level and by the domain-manifest currently being used(Sheets, RFIs etc...)
+
+We sequester these methods in either the `action_creators/application.js` or the 
+`view_actions` and `route_actions` files unique to each domain, `action_creators/rfis/route_actions`
+for example. These should be something very specific so naming clashes will not
+be a problem. A naming convention to follow is using `informFoo` for views and 
+`fooRouteCalled` for routes. The globally available:
+
+    page.actions.informRoute("foo", {...});
+    
+For example dispathes an action that will be handled by the Backbone navigator, and
+there is:
+
+    page.actions.informAnalytics(methodName, args);
+    
+for dispatching analytics events. Both of these methods begin with "inform" obviously
+and re-inforce the idea that views **inform** the flux system of new data by raising
+events.
+
+There is a little philosophy involved in the scope of views dispatching actions and
+delegating to action creators. For example, the router chooses to use a
+creator when `new` type routes are called because a `store` may need to be created.
+The following located in the `route_actions` for the "RFIs Router":
+
+    newRouteCalled: function newRouteCalled(cons) {
+
+      var m = new PG.Models.Rfi();
+
+      page.dispatcher.dispatchRouteAction({
+        type: "new_",
+        constructor: cons,
+        data: {model: m}
+      });
+
+    }
+    
+While it is the logical domain of a router to understand routes and the view
+constructors that will be called upon to handle them, it is not in it's 
+responsibilities to make data stores. Even though the route_actions creators
+are associated with the router, they are not *tightly* coupled to it and they do
+provide the place to expand scope. This may be stretching [Demeter's Law]() 
+somewhat but the elasticity we build in here will prevent over-engineering
 
 
 ##Views
