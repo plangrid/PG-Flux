@@ -94,18 +94,57 @@ An example of a the above handler that pivots based on `concern`:
 
   
 ##The Dispatcher
-So, you [get the idea](http://facebook.github.io/flux/docs/overview.html#what-about-that-dispatcher).
+From the flux docs [here](http://facebook.github.io/flux/docs/overview.html#what-about-that-dispatcher).
 
 Actions are sent to the dispatcher by **2** sources:
 
 1. The Router, including its associated `route_actions` action creators
 2. Views, including their associated `view_actions` action creators
 
-Remember that Stores register with the dispatcher when istantiated. They will 
-recieve **every** action that is raised
+Remember that Stores register with the dispatcher when istantiated and that the
+dispatcher sends every dispatched payload to every registered callback.
+
+The dispatcher also makes use of the `invariant` development tool and will throw
+an error if cyclical dependency (via `waitFor`) is detected or **cascading dispatches**
+occur.
+
+####On Cascading Dispatches
+If, during a dispatch callback another dispatch is attempted you will get the
+"cannot dispatch in the middle of a dispatch" error. It's a nice way to indicate 
+you are doing it wrong. Some common causes:
+
++ You are trying to call `dispatcher.dispatch` in the initialization phase of
+a child view. Remember that the `page.currentView` is set by the `ViewManager`
+during a dispatch callback so this will get you every time
+
+Looking at the above a little more in-depth. In every instance that I have seen
+this the developer is trying to get some data to a store that should already be
+there. I find this is due to an old "MVC" habit where views set data into models,
+particularly at "init" time.
 
 ##Actions
-From the flux docs [here](http://facebook.github.io/flux/docs/overview.html#actions).
+So, you [get the idea](http://facebook.github.io/flux/docs/overview.html#actions).
+
+We have 2 primary types of actions. Those sent from the `Router` and those sent
+via `Views`. With this in mind we have 2 specialized methods on the dispatcher that you can use,
+`page.dispatcher.dispatchRouteAction` and `page.dispatcher.dispatchViewAction`. These methods
+wrap your action in an object with the `source` property set correctly. Your router 
+and its associated `route_action` creators will dispatch via the former:
+
+    page.dispatcher.dispatchRouteAction({
+      type: "index",
+      ...
+    });
+    
+without that convenience method you would have to do this:
+
+    page.dispatcher.dispatch({
+      source: page.constants.ROUTE_SOURCE,
+      action: {
+        type: "index",
+        ...
+      }
+    });
 
 ##Views
 And, [a link](http://facebook.github.io/flux/docs/overview.html#views-and-controller-views)
