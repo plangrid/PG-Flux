@@ -145,6 +145,15 @@ without that convenience method you would have to do this:
         ...
       }
     });
+    
+So, using the convenience method you are left simply to attach the properties
+to your action and send it along. Let's breakdown the keys and values that might
+appear on an action:
+
++ **type**. This is the closest we come to a mandatory attribute for an action, 
+though there may be occassions when `source` alone is enough for a given store.
+The value is something that informs the consuming store about what just happened.
+
 
 ##Views
 And, [a link](http://facebook.github.io/flux/docs/overview.html#views-and-controller-views)
